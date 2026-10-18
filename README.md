@@ -12,6 +12,12 @@ A weekly, two-agent AI pipeline: one agent **discovers** new competitors on the 
 structured results to Google Sheets and emails a summary. Runs on free-tier **Groq** (LLM) +
 **Tavily** (web search), with anti-hallucination prompting and free-tier rate-limit handling.
 
+### 🧑‍💼 [AI Résumé Intake & Scoring](ai-resume-scoring/)
+A recruiting automation that watches an inbox for inbound applications, retrieves each résumé through
+a primary path with two fallbacks, archives the PDF, and scores the candidate against role criteria
+with an AI agent returning structured JSON — with an idempotent guard against reprocessing the same
+application. 67 nodes.
+
 ### 📊 [Order Reporting Pipeline](order-reporting/)
 A data-processing workflow that fetches orders and customers from an API, merges and enriches them,
 calculates totals, summarizes by region, filters a segment, converts to CSV, posts a summary to
