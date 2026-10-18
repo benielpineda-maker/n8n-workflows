@@ -1,0 +1,1047 @@
+{
+  "name": "AI Competitive Intelligence Research (Demo)",
+  "nodes": [
+    {
+      "parameters": {
+        "sendTo": "you@example.com",
+        "subject": "=AI Competitive Research Report - {{ $now.toFormat(\"MMMM d, yyyy\") }}",
+        "message": "=<p>This week's AI-powered competitive research has been refreshed.</p><p>The <b>Competitors Analysis</b> and <b>Reviews_Detail</b> tabs have been updated in your Google Sheet with fresh web-researched sentiment analysis for each competitor.</p>",
+        "options": {}
+      },
+      "id": "ebdb453f-10f2-4d88-b7e0-3c3e28ee3f2c",
+      "name": "Send Weekly Summary Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1888,
+        -608
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a competitive-intelligence researcher for a Chicago green-building/home-remodeling company called GreenBuild Co.\n\nYour task: research the competitor \"{{ $json.Competitor }}\" (website: {{ $json.Website || 'unknown, please find it' }}, known address on file: {{ $json.Address || 'not yet researched' }}) and find out what customers say about them across review sites AND social media, AND research their pricing/business model, AND check their search visibility.\n\nDue to API rate limits, you must be EFFICIENT: run AT MOST 3 total searches, then produce your final answer. Use your searches for BOTH purposes below - do not use extra searches beyond 3:\n\n- 1-2 searches on the company directly, e.g. \"{{ $json.Competitor }} Chicago reviews Houzz Yelp\", \"{{ $json.Competitor }} address contact pricing BBB complaints\"\n- 1 search using a GENERIC category term a real customer would search (not the company name), e.g. \"Chicago home remodeling contractor\" or \"Chicago custom home builder\" or \"Chicago green building contractor\" (pick whichever best matches this company's actual specialty). Look at whether \"{{ $json.Competitor }}\" or its website appears anywhere in those results, and roughly where (e.g. \"appeared on page 1\", \"appeared alongside Houzz/Yelp listings but not directly\", \"did not appear in these results\").\n\nRead the search result snippets carefully. Base your analysis STRICTLY on what you actually find - do not invent or assume details you did not see.\n\nThen produce:\n\n1. aboutSummary: a 1-2 sentence factual description of what this company does, based on what you found. If you cannot determine this, say \"Company overview not found in available sources.\"\n\n2. addressFound: their business address in the Chicago area, if you find one in search results. If an address was already on file and you find nothing more specific, repeat the known one. If truly nothing found, say \"Address not publicly available.\"\n\n3. reviewCount: the total number of distinct individual reviews/testimonials you actually found evidence of across all sources. If you found zero, use 0.\n\n4. overallSentiment: one short phrase. If reviewCount is 0, set this to \"No reviews found\".\n\n5. topPraiseThemes: 2-3 recurring positive themes. If no positive reviews were found, return an empty array.\n\n6. whyBadReviewsHappen: a specific, evidence-based explanation of root causes behind negative reviews. If no negative reviews were found at all, explicitly say \"No negative reviews found\" rather than inventing one.\n\n7. positiveReviews: an array of distinct positive review/testimonial snippets you found, each with its source platform (e.g. \"Yelp\", \"Google\", \"Houzz\", \"Facebook\", \"Instagram\", \"TikTok\", \"YouTube\", \"Reddit\", \"BBB\", \"Glassdoor\", \"Indeed\") and a short snippet/summary (1-2 sentences, paraphrased in your own words). If none found, return an empty array.\n\n8. negativeReviews: same format as positiveReviews, but for negative reviews/complaints. If none found, return an empty array.\n\n9. sourcesFound: list only the specific platforms where you genuinely found reviewable content - not ones you merely searched without results.\n\n10. pricingInsights: research and answer, in a short paragraph, based ONLY on what you actually find in search results or on their website:\n   - How are their products/services priced? (e.g. published price list, custom quotes, per-square-foot, hourly, etc.)\n   - Do their prices vary for channel partners/trade professionals versus direct retail customers?\n   - What is their discount policy, if any (seasonal promotions, referral discounts, volume discounts)?\n   - Based on their positioning, service scope, and any pricing signals found, what can you reasonably estimate about their cost structure (e.g. labor-heavy custom work vs. standardized/scalable offerings, premium vs. budget positioning)?\n   If you cannot find pricing information for one or more of these questions, say so explicitly rather than guessing or inventing numbers. It is very common for contractors in this industry to not publish pricing at all - report that honestly if so.\n\n11. seoGeoRanking: based on your generic-category search, report honestly whether and roughly where this company appeared - e.g. \"Appeared on page 1 for '[term]', among top results\" or \"Did not appear in top results for '[term]' - lower organic visibility than competitors like Houzz/Yelp listings\" or \"Could not determine - generic search returned mostly directory sites, not individual contractor rankings.\" Never invent a specific numeric rank you didn't actually observe from the search results.\n\nIMPORTANT: Every positiveReviews and negativeReviews entry must be something you actually found in a search result. Never fabricate a review, price, address, ranking, or discount detail to fill out the answer. It is completely fine and expected for a small local business to have very few or zero reviews, no public pricing information, no easily findable address, and no notable search-ranking visibility - report that honestly.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a meticulous research assistant. You only report findings you actually observed in search results. You never invent statistics, review counts, or quotes. When evidence is thin, you say so explicitly rather than filling gaps with assumptions.",
+          "maxIterations": 5
+        }
+      },
+      "id": "7682ed43-3353-43ec-9802-b6f7bb1a522c",
+      "name": "Research Competitor Reviews",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        896,
+        -576
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tavily.com/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"query\": $fromAI('query', 'The exact search query to run'), \"search_depth\": \"basic\", \"max_results\": 3, \"include_answer\": false, \"include_raw_content\": false } }}",
+        "options": {},
+        "optimizeResponse": true
+      },
+      "id": "0f7f2abc-2c5b-4c1e-a100-635205b579f8",
+      "name": "Web Search (DuckDuckGo)",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        976,
+        -384
+      ]
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\"aboutSummary\": \"Family-owned residential remodeling company specializing in kitchen and bath renovations, operating in the Chicago area since 2015.\", \"addressFound\": \"1234 W Example St, Chicago, IL 60601\", \"reviewCount\": 8, \"overallSentiment\": \"Mostly positive\", \"topPraiseThemes\": [\"On-time delivery\", \"Craftsmanship quality\", \"Responsive communication\"], \"whyBadReviewsHappen\": \"Negative reviews, where present, consistently cite unexpected cost increases mid-project and long gaps between updates during permitting delays, rather than the quality of finished work. If no negative reviews were found, state that clearly here instead.\", \"positiveReviews\": [{\"source\": \"Yelp\", \"snippet\": \"Great experience, on time and on budget.\"}, {\"source\": \"Houzz\", \"snippet\": \"Beautiful kitchen remodel, highly professional team.\"}], \"negativeReviews\": [{\"source\": \"Google\", \"snippet\": \"Price went up significantly mid-project without much warning.\"}], \"sourcesFound\": [\"Houzz\", \"Yelp\", \"Google\"], \"pricingInsights\": \"Pricing model: appears to use custom project-based quotes rather than published rates. Channel partner pricing: no evidence found of different pricing tiers. Discount policy: no publicly advertised discounts found. Estimated cost structure: likely mid-to-high-end positioning with costs driven by labor and custom material sourcing.\", \"seoGeoRanking\": \"When searching 'Chicago kitchen and bath remodeling contractor', this company's website appeared on the first page of results (approx. position 4), alongside Houzz and Yelp listings. Strong organic visibility for its core service category.\"}"
+      },
+      "id": "63ca6a1b-694a-414a-8c4b-bde94db26b1e",
+      "name": "Research Output Format",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1104,
+        -384
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Competitors Analysis"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "Competitor"
+          ],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Competitor",
+              "id": "Competitor",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "1cf8e9c2-ef23-498a-b7b2-2bf47c1cf288",
+      "name": "Write Competitors Analysis Tab",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1552,
+        -576
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "id": "e845faec-2ebe-4a44-aa7c-d9a7debbeed2",
+      "name": "Loop Over Competitors",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        544,
+        -592
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = $('Research Competitor Reviews').first().json.output;\nconst competitor = $('Loop Over Competitors').first().json.Competitor;\nconst weekOf = new Date().toISOString().slice(0, 10);\nconst positives = (output.positiveReviews || []).map(r => ({\n  Competitor: competitor, Sentiment: 'Positive', Source: r.source, ReviewSnippet: r.snippet, WeekOf: weekOf\n}));\nconst negatives = (output.negativeReviews || []).map(r => ({\n  Competitor: competitor, Sentiment: 'Negative', Source: r.source, ReviewSnippet: r.snippet, WeekOf: weekOf\n}));\nconst all = [...positives, ...negatives];\nif (all.length === 0) {\n  all.push({ Competitor: competitor, Sentiment: 'No review found', Source: 'No review found', ReviewSnippet: 'No review found', WeekOf: weekOf });\n}\nreturn all.map(r => ({ json: r }));"
+      },
+      "id": "flatten-reviews-2",
+      "name": "Flatten Reviews For Detail",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        512,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Reviews_Detail"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Competitor",
+              "displayName": "Competitor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ReviewSnippet",
+              "displayName": "ReviewSnippet",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "WeekOf",
+              "displayName": "WeekOf",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "write-reviews-detail-2",
+      "name": "Write Reviews Detail Tab",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        864,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "Competitor",
+              "type": "string",
+              "value": "={{ $('Loop Over Competitors').first().json.Competitor }}"
+            },
+            {
+              "id": "a10",
+              "name": "Website",
+              "type": "string",
+              "value": "={{ $('Loop Over Competitors').first().json.Website }}"
+            },
+            {
+              "id": "a11",
+              "name": "Address",
+              "type": "string",
+              "value": "={{ $json.output.addressFound || $('Loop Over Competitors').first().json.Address || 'Not yet researched' }}"
+            },
+            {
+              "id": "a2",
+              "name": "ReviewCount",
+              "type": "number",
+              "value": "={{ $json.output.reviewCount }}"
+            },
+            {
+              "id": "a4",
+              "name": "TopPraiseThemes",
+              "type": "string",
+              "value": "={{ ($json.output.topPraiseThemes || []).length ? $json.output.topPraiseThemes.join(', ') : 'No review found' }}"
+            },
+            {
+              "id": "a6",
+              "name": "WhyBadReviewsHappen",
+              "type": "string",
+              "value": "={{ $json.output.whyBadReviewsHappen }}"
+            },
+            {
+              "id": "a13",
+              "name": "PositiveReviewsSummary",
+              "type": "string",
+              "value": "={{ ($json.output.positiveReviews || []).length ? $json.output.positiveReviews.map(r => '[' + r.source + '] ' + r.snippet).join(' | ') : 'No review found' }}"
+            },
+            {
+              "id": "a14",
+              "name": "NegativeReviewsSummary",
+              "type": "string",
+              "value": "={{ ($json.output.negativeReviews || []).length ? $json.output.negativeReviews.map(r => '[' + r.source + '] ' + r.snippet).join(' | ') : 'No review found' }}"
+            },
+            {
+              "id": "a12",
+              "name": "AboutSummary",
+              "type": "string",
+              "value": "={{ $json.output.aboutSummary }}"
+            },
+            {
+              "id": "a19",
+              "name": "PricingInsights",
+              "type": "string",
+              "value": "={{ $json.output.pricingInsights || 'No pricing information found' }}"
+            },
+            {
+              "id": "a20",
+              "name": "SEOGEORanking",
+              "type": "string",
+              "value": "={{ $json.output.seoGeoRanking || 'Not researched' }}"
+            },
+            {
+              "id": "a3",
+              "name": "OverallSentiment",
+              "type": "string",
+              "value": "={{ $json.output.reviewCount === 0 ? 'No review found' : $json.output.overallSentiment }}"
+            },
+            {
+              "id": "a8",
+              "name": "SourcesFound",
+              "type": "string",
+              "value": "={{ ($json.output.sourcesFound || []).length ? $json.output.sourcesFound.join(', ') : 'No review found' }}"
+            },
+            {
+              "id": "a9",
+              "name": "WeekOf",
+              "type": "string",
+              "value": "={{ $now.toISODate() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "format-analysis-row-restored",
+      "name": "Format Analysis Row",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1280,
+        -576
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 65
+      },
+      "id": "rate-limit-wait-1",
+      "name": "Wait Between Competitors",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        736,
+        -576
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -848,
+        -624
+      ],
+      "id": "83f0b702-a304-4ba3-ae8e-988e5a88a1f0",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "groq-model-1",
+      "name": "Groq Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        864,
+        -384
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const found = ($json.output && $json.output.newCompetitors) || [];\nreturn found.map(c => ({ json: {\n  Competitor: c.name,\n  Website: c.website || '',\n  Address: 'Not yet researched',\n  ReviewCount: '',\n  TopPraiseThemes: '',\n  WhyBadReviewsHappen: '',\n  PositiveReviewsSummary: '',\n  NegativeReviewsSummary: '',\n  AboutSummary: '',\n  OverallSentiment: '',\n  PricingInsights: '',\n  SourcesFound: '',\n  WeekOf: new Date().toISOString().slice(0, 10)\n} }));"
+      },
+      "id": "aggregate-names-2",
+      "name": "Aggregate Competitor Names",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        -624
+      ]
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "discover-groq-model-1",
+      "name": "Discover Groq Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -624,
+        -448
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tavily.com/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"query\": $fromAI('query', 'search query'), \"search_depth\": \"basic\", \"max_results\": 2, \"include_answer\": false, \"include_raw_content\": false } }}",
+        "options": {},
+        "optimizeResponse": true
+      },
+      "id": "discover-tool-2",
+      "name": "Web Search (Discover)",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        -480,
+        -464
+      ]
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\"foundAnyNew\": false, \"newCompetitors\": [{\"name\": \"Example Builders Chicago\", \"website\": \"https://example.com\"}], \"searchNote\": \"Searched for Chicago green-building and remodeling contractors not already in the tracked list.\"}"
+      },
+      "id": "discover-parser-2",
+      "name": "Discover Output Format",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -352,
+        -480
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are researching competitors for GreenBuild Co, a Chicago-area green-building/home-remodeling company.\n\nCompetitors ALREADY being tracked ({{ $json.existingCount }} total): {{ $json.existingNamesText }}\n\nDue to API rate limits, run AT MOST 3 searches total. Search the web for OTHER Chicago-area home remodeling, custom home building, or green-building construction companies that are NOT already in the list above. Try 2-3 broad queries like \"Chicago green building contractor remodeling\", \"best custom home builders Chicago\", \"sustainable home builder Chicago suburbs\".\n\nOnly report a company as a genuinely new competitor if: (a) it clearly operates in the Chicago area, (b) it is NOT already in the tracked list above (check names carefully, including variations), and (c) you found real evidence it exists as an operating business (a real website, a real business listing).\n\nIf you don't find any genuinely new competitors you're confident about, set foundAnyNew to false and return an empty newCompetitors array - do not force a match just to have something to report.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a careful researcher. You only report companies you genuinely found in search results as real, distinct, currently-operating businesses. You never invent company names. If you are not confident a result is a real new competitor, leave it out.",
+          "maxIterations": 5
+        }
+      },
+      "id": "discover-agent-2",
+      "name": "Discover New Competitors",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -576,
+        -640
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Competitors Analysis"
+        },
+        "options": {}
+      },
+      "id": "reread-comp-2",
+      "name": "Re-Read Competitor List",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        272,
+        -464
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Competitors Analysis",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "AboutSummary": "={{ $json.AboutSummary }}",
+            "Address": "={{ $json.Address }}",
+            "Competitor": "={{ $json.Competitor }}",
+            "NegativeReviewsSummary": "={{ $json.NegativeReviewsSummary }}",
+            "OverallSentiment": "={{ $json.OverallSentiment }}",
+            "PositiveReviewsSummary": "={{ $json.PositiveReviewsSummary }}",
+            "PricingInsights": "={{ $json.PricingInsights }}",
+            "ReviewCount": "={{ $json.ReviewCount }}",
+            "SourcesFound": "={{ $json.SourcesFound }}",
+            "TopPraiseThemes": "={{ $json.TopPraiseThemes }}",
+            "Website": "={{ $json.Website }}",
+            "WeekOf": "={{ $json.WeekOf }}",
+            "WhyBadReviewsHappen": "={{ $json.WhyBadReviewsHappen }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Competitor",
+              "id": "Competitor",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Website",
+              "id": "Website",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "Address",
+              "id": "Address",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "ReviewCount",
+              "id": "ReviewCount",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "TopPraiseThemes",
+              "id": "TopPraiseThemes",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "WhyBadReviewsHappen",
+              "id": "WhyBadReviewsHappen",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "PositiveReviewsSummary",
+              "id": "PositiveReviewsSummary",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "NegativeReviewsSummary",
+              "id": "NegativeReviewsSummary",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "AboutSummary",
+              "id": "AboutSummary",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "OverallSentiment",
+              "id": "OverallSentiment",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "PricingInsights",
+              "id": "PricingInsights",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "SourcesFound",
+              "id": "SourcesFound",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "WeekOf",
+              "id": "WeekOf",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        16,
+        -640
+      ],
+      "id": "ef3c1d36-8c1e-40e0-9a38-ae382e3d0d39",
+      "name": "Append row in sheet"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "sig1",
+              "name": "__signal",
+              "type": "boolean",
+              "value": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "signal-after-append-1",
+      "name": "Signal After Append",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        144,
+        -32
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {
+          "includeUnpaired": true
+        }
+      },
+      "id": "merge-after-append-1",
+      "name": "Merge After Append",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        272,
+        -624
+      ]
+    },
+    {
+      "parameters": {
+        "content": "# GreenBuild Co Competitive Intelligence Workflow\n\nThis workflow runs weekly (Mondays 7am) and does two things:\n\n**1. DISCOVERY** \u2014 an AI agent searches the web for Chicago-area home remodeling/green-building competitors not already tracked, and adds any real ones it finds.\n\n**2. RESEARCH** \u2014 for every tracked competitor (old + newly found), a second AI agent searches for reviews, pricing info, address, and search-ranking visibility, then writes structured results into the Competitors Analysis and Reviews_Detail tabs.\n\n**Key rule throughout:** the AI is instructed to never invent data \u2014 it reports \"No review found\" / \"Not publicly available\" honestly whenever it can't find real evidence.\n\n**Uses:** Groq (free LLM) + Tavily (free web search) \u2014 see the yellow notes near each section below for details, including the rate-limit fixes that were needed.",
+        "height": 1212,
+        "width": 3052,
+        "color": "#1C7827"
+      },
+      "id": "sticky-overview-1",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -880,
+        -1120
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## PHASE 1: Discover New Competitors\n\n**Schedule Trigger** \u2014 fires weekly, Mondays 7:00 AM. Also kicks off a parallel \"safety signal\" branch (see the note near Merge After Append).\n\n**Discover New Competitors** (AI Agent) \u2014 searches the web for Chicago-area remodeling/green-building companies NOT already tracked. Capped at 3 searches to stay within Groq's free-tier token budget. Only reports a company if it found real evidence (a real website/listing) \u2014 never invents names.\n  - **Discover Groq Model**: the LLM brain (openai/gpt-oss-120b via Groq, free tier)\n  - **Web Search (Discover)**: calls Tavily's search API (kept lean \u2014 max_results:2, no raw content \u2014 to avoid exceeding Groq's 8,000 tokens/minute limit)\n  - **Discover Output Format**: forces the AI's answer into structured JSON: {foundAnyNew, newCompetitors: [{name, website}]}\n\n**Aggregate Competitor Names** \u2014 turns each newly-found company into a full (mostly blank) row matching the sheet's columns.\n\n**Append row in sheet** \u2014 writes those new competitor rows into the Competitors Analysis tab.",
+        "height": 1008,
+        "width": 1380,
+        "color": 7
+      },
+      "id": "sticky-discovery-phase-1",
+      "name": "Discovery Phase Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -880,
+        -880
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## The \"always continue\" fix\n\nn8n stops the whole workflow if a step outputs ZERO rows \u2014 which would happen every time Discovery finds no new competitors, silently skipping the entire research phase below.\n\n**Signal After Append** fires a guaranteed placeholder item in parallel, straight from the Schedule Trigger.\n\n**Merge After Append** combines it with whatever \"Append row in sheet\" produced (0 or more rows), using \"include unpaired items\" \u2014 guaranteeing the pipeline always continues.\n\n**Re-Read Competitor List** then reads the full, current competitor list (old + any new ones) to feed the research loop below.",
+        "height": 460,
+        "width": 608,
+        "color": "#5C2D2D"
+      },
+      "id": "sticky-fallback-fix-1",
+      "name": "Fallback Fix Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        -336
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## PHASE 2: Research Each Competitor\n\n**Loop Over Competitors** \u2014 processes one competitor at a time (reset:false, so it correctly advances through the whole list on each \"next\" signal).\n\n**Wait Between Competitors** \u2014 pauses 65 seconds before each one, to respect free-tier rate limits.\n\n**Research Competitor Reviews** (AI Agent) \u2014 the core research step. In at most 3 searches, it finds: company description, confirmed address, review count & sentiment, praise/complaint themes with root-cause analysis, individual review snippets tagged by source (Houzz/Yelp/Google/Facebook/etc.), pricing model & discount policy, and SEO/GEO search-ranking visibility.\n  - **Groq Model**: same free LLM as Discovery\n  - **Web Search (DuckDuckGo)**: name is legacy \u2014 it actually calls Tavily's API, kept lean (max_results:3, no raw content)\n  - **Research Output Format**: forces the 11-field structured JSON answer\n\n**Format Analysis Row** \u2014 maps the AI's JSON into the 14 sheet columns, with honest \"No review found\" fallbacks wherever nothing was found.\n\n**Write Competitors Analysis Tab** \u2014 writes/updates that competitor's row (matched by name), then loops to the next one.",
+        "height": 996,
+        "width": 1684,
+        "color": 7
+      },
+      "id": "sticky-research-phase-1",
+      "name": "Research Phase Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        496,
+        -880
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Reviews_Detail: replace, don't pile up\n\n**Flatten Reviews For Detail** \u2014 before writing, it first deletes this competitor's OLD rows (in descending row-number order, to avoid index-shift bugs during deletion), then builds one fresh row per individual review found (tagged Positive/Negative + source platform).\n\n**Write Reviews Detail Tab** \u2014 writes the fresh rows.\n\nThis keeps the tab showing only the latest week's findings per competitor, instead of growing forever.",
+        "height": 300,
+        "width": 784,
+        "color": "#5C2D2D"
+      },
+      "id": "sticky-detail-tab-1",
+      "name": "Detail Tab Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        464,
+        -176
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Wrap-up\n\n**Send Weekly Summary Email** \u2014 fires once, after every competitor in the loop has been processed, notifying that the sheet has been refreshed.",
+        "height": 316,
+        "width": 380,
+        "color": "#B08787"
+      },
+      "id": "sticky-email-1",
+      "name": "Email Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1744,
+        -736
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Research Competitor Reviews": {
+      "main": [
+        [
+          {
+            "node": "Format Analysis Row",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Flatten Reviews For Detail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Web Search (DuckDuckGo)": {
+      "ai_tool": [
+        [
+          {
+            "node": "Research Competitor Reviews",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Research Output Format": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Research Competitor Reviews",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Competitors": {
+      "main": [
+        [
+          {
+            "node": "Send Weekly Summary Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait Between Competitors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Competitors Analysis Tab": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Competitors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flatten Reviews For Detail": {
+      "main": [
+        [
+          {
+            "node": "Write Reviews Detail Tab",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Analysis Row": {
+      "main": [
+        [
+          {
+            "node": "Write Competitors Analysis Tab",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Between Competitors": {
+      "main": [
+        [
+          {
+            "node": "Research Competitor Reviews",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Research Competitor Reviews",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Competitor Names": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discover Groq Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Discover New Competitors",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Web Search (Discover)": {
+      "ai_tool": [
+        [
+          {
+            "node": "Discover New Competitors",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discover Output Format": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Discover New Competitors",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discover New Competitors": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Competitor Names",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Re-Read Competitor List": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Competitors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Discover New Competitors",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Signal After Append",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Merge After Append",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Signal After Append": {
+      "main": [
+        [
+          {
+            "node": "Merge After Append",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge After Append": {
+      "main": [
+        [
+          {
+            "node": "Re-Read Competitor List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp",
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": []
+}

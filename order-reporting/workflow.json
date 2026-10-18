@@ -1,0 +1,452 @@
+{
+  "name": "Generating Reports",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "83e313f9-d2b1-4783-9fac-16155ca5d911",
+      "name": "When clicking \u2018Execute workflow\u2019"
+    },
+    {
+      "parameters": {
+        "url": "https://learn.app.n8n.cloud/webhook/courses/n8n-quickstart/company-data",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": " x-assessment-id",
+              "value": "9ee94eac2831961bbde6b584271b5beb"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        256,
+        -80
+      ],
+      "id": "16a7517d-42cf-40eb-b80f-15de49454996",
+      "name": "GetOrderData"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "lUs9in17K4LNppXX",
+          "mode": "list",
+          "cachedResultName": "customers",
+          "cachedResultUrl": "/projects/tJGKHRllA2uOltGm/datatables/lUs9in17K4LNppXX"
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        272,
+        80
+      ],
+      "id": "39a3b5de-a5d7-4b35-a07b-c300174b297f",
+      "name": "GetCustomers"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "customerID",
+              "field2": "customerID"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        544,
+        0
+      ],
+      "id": "ef09fbe5-8500-47be-b308-13a07c482f64",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9be60522-d734-4acc-9ce4-3911177ee751",
+              "name": "orderTotal",
+              "value": "= {{ $json.orderPrice * $json.quantity }}",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        768,
+        0
+      ],
+      "id": "8abd7c1f-4f23-43f3-b574-18199fdc1b0a",
+      "name": "CalculateTotal"
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "orderTotal",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        992,
+        0
+      ],
+      "id": "a1a63f40-bf1c-4a83-8669-3e727afd2918",
+      "name": "SortByTotal"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fecdb5b5-51a5-4a4c-a57a-dab160cef5ea",
+              "leftValue": "={{ $json.region }}",
+              "rightValue": "Europe",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        1232,
+        48
+      ],
+      "id": "8d085d5e-d7a1-4ad2-9225-49f05fc26cb9",
+      "name": "EuropeOnly"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1488,
+        48
+      ],
+      "id": "baea244a-10d1-43d0-818d-a733aeb9a61f",
+      "name": "ConvertToCSV"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://learn.app.n8n.cloud/webhook/courses/n8n-quickstart/upload-report",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-assessment-id",
+              "value": "9ee94eac2831961bbde6b584271b5beb"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2112,
+        0
+      ],
+      "id": "6f5073a9-5864-42ea-a5d3-abd8853be047",
+      "name": "UploadReport"
+    },
+    {
+      "parameters": {
+        "fieldsToSummarize": {
+          "values": [
+            {
+              "aggregation": "sum",
+              "field": "orderTotal"
+            },
+            {
+              "field": "orderTotal"
+            }
+          ]
+        },
+        "fieldsToSplitBy": "region",
+        "options": {
+          "outputFormat": "separateItems"
+        }
+      },
+      "type": "n8n-nodes-base.summarize",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        -192
+      ],
+      "id": "c2b1b8c7-c33b-44f3-a079-425c80eb2c3a",
+      "name": "SummarizeByRegion"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1648,
+        -128
+      ],
+      "id": "9110d0d7-44a6-4546-a03d-3de6e0bbd4cb",
+      "name": "SummaryToCSV"
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "sum_orderTotal",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        1424,
+        -192
+      ],
+      "id": "dcafb8db-ae47-4fbd-a0ef-3cc225002004",
+      "name": "SortSummary"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "365a2d67-826e-4413-b3c2-8185cff35142",
+              "name": "discord_message",
+              "value": "=[9ee94eac2831961bbde6b584271b5beb] Regional Sales Summary: {{ $json.region }} - {{ $json.count_orderTotal }} orders, total: ${{ $json.sum_orderTotal.toFixed(2) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1648,
+        -320
+      ],
+      "id": "1fc6453d-433e-4664-9af6-f03bf4551bf9",
+      "name": "BuildDiscordMessage"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "={{ $('BuildDiscordMessage').item.json.discord_message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        1872,
+        -320
+      ],
+      "id": "b113c30b-ca03-4ea1-bc0b-6f3d18305521",
+      "name": "Discord"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking \u2018Execute workflow\u2019": {
+      "main": [
+        [
+          {
+            "node": "GetOrderData",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GetCustomers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GetOrderData": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GetCustomers": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "CalculateTotal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CalculateTotal": {
+      "main": [
+        [
+          {
+            "node": "SortByTotal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SortByTotal": {
+      "main": [
+        [
+          {
+            "node": "SummarizeByRegion",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "EuropeOnly",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EuropeOnly": {
+      "main": [
+        [
+          {
+            "node": "ConvertToCSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ConvertToCSV": {
+      "main": [
+        [
+          {
+            "node": "UploadReport",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SummarizeByRegion": {
+      "main": [
+        [
+          {
+            "node": "SortSummary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SortSummary": {
+      "main": [
+        [
+          {
+            "node": "BuildDiscordMessage",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SummaryToCSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BuildDiscordMessage": {
+      "main": [
+        [
+          {
+            "node": "Discord",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": []
+}
