@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "sendTo": "you@example.com",
+        "sendTo": "benielpineda@gmail.com",
         "subject": "=AI Competitive Research Report - {{ $now.toFormat(\"MMMM d, yyyy\") }}",
         "message": "=<p>This week's AI-powered competitive research has been refreshed.</p><p>The <b>Competitors Analysis</b> and <b>Reviews_Detail</b> tabs have been updated in your Google Sheet with fresh web-researched sentiment analysis for each competitor.</p>",
         "options": {}
