@@ -7,6 +7,8 @@ Google Sheet and emails a summary.
 
 Runs entirely on **free-tier services**: Groq (LLM) + Tavily (web search).
 
+![Workflow canvas](workflow.png)
+
 > **Demo project.** This is a sanitized, generic version of a production workflow — company names,
 > emails, sheet IDs, and credentials have been removed. Import it, connect your own accounts, and
 > point it at your own sheet.
