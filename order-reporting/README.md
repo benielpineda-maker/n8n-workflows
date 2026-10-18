@@ -4,6 +4,8 @@ A data-processing and reporting workflow built in **n8n**. It pulls orders and c
 API, joins and enriches them, computes totals, summarizes by region, filters a segment, and delivers
 the results to multiple destinations (CSV, Discord, and an upload endpoint).
 
+![Workflow canvas](workflow.png)
+
 > **Demo project.** Sanitized export — credentials removed. Import it, connect your own accounts, and
 > point the HTTP nodes at your own data source.
 
