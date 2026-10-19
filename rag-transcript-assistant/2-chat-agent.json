@@ -1,0 +1,253 @@
+{
+  "updatedAt": "2026-04-06T20:14:26.000Z",
+  "createdAt": "2026-02-02T14:49:31.042Z",
+  "name": "RAG Transcript Assistant — 2. Chat Agent API",
+  "isArchived": true,
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.chatInput }}",
+        "options": {
+          "systemMessage": "=You are a QA Performance Analyst.\nYour goal is to retrieve call transcripts from the vector database and summarize them.\n\nCRITICAL RULES:\n1. The user's message will ALWAYS start with the agent's name (e.g. \"Alex how did the call go...\").\n2. You MUST ALWAYS use the 'transcript_search' tool immediately.\n3. Treat the FIRST word of the user's message as the agent name.\n4. Do not ask for the name. Just search using the tool.\n5. Base your answer only on retrieved transcripts. If nothing relevant is found, say so."
+        }
+      },
+      "id": "7eace330-ba8a-419d-a784-d353eca53ff5",
+      "name": "AI Manager Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        272,
+        -368
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "transcript_search",
+        "toolDescription": "Searches the call transcripts database for the specific agent.",
+        "qdrantCollection": "agent_transcripts",
+        "options": {}
+      },
+      "id": "39a60678-1cca-49c2-b122-6f7a452ae7d2",
+      "name": "Qdrant Vector Store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1,
+      "position": [
+        336,
+        112
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "bbYOUR_DRIVE_FOLDER_ID",
+      "name": "Gemini Embeddings",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        336,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "projectId": {
+          "__rl": true,
+          "value": "your-gcp-project-id",
+          "mode": "list",
+          "cachedResultName": "Acme Home Services Project"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleVertex",
+      "typeVersion": 1,
+      "position": [
+        272,
+        -192
+      ],
+      "id": "ccf4d43a-9925-4dc4-9fd4-e159a0b5e674",
+      "name": "Google Vertex AI"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chat-agent",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "https://Acme Home Services-intelligence.lovable.app"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        448,
+        -640
+      ],
+      "id": "eca04dca-8e34-4e7a-b482-9c9adf8f37ab",
+      "name": "Loveable Message Receive Webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ \"output\": $json.output }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1024,
+        -368
+      ],
+      "id": "ce9ec30a-6f7c-4a93-8d66-0bb1803ea1bc",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "content": "### Phase 1: Secure Ingestion\n**Trigger:** Webhook from Lovable App.\n**Security:** Protected by Header Auth (your own credential).\n**Input:** Receives `chatInput` (e.g., \"Alex, how was the call?\").",
+        "height": 220,
+        "width": 1160
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -304,
+        -672
+      ],
+      "id": "27ca58e4-9fba-444f-9c2d-f5b9c7f1a335",
+      "name": "Phase 1 Note"
+    },
+    {
+      "parameters": {
+        "content": "### Phase 2: AI Brain (RAG Agent)\n**Model:** Google Vertex AI.\n**Role:** QA Performance Analyst.\n**Strict Rules:**\n1. Treats the *first word* of input as the Agent Name.\n2. **MUST** use the Vector Tool to search transcripts.\n3. Summarizes performance based on retrieved data.",
+        "height": 368,
+        "width": 1164,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -304,
+        -432
+      ],
+      "id": "694e2d7c-91e2-4b49-9793-9a26d827fba2",
+      "name": "Phase 2 Note"
+    },
+    {
+      "parameters": {
+        "content": "### Phase 3: Vector Retrieval\n**Database:** Qdrant (`agent_transcripts` collection).\n**Embeddings:** Google Gemini.\n**Function:** Converts the user query into vectors, finds the most relevant call transcripts, and feeds them back to the AI.",
+        "height": 492,
+        "width": 1160,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -304,
+        -32
+      ],
+      "id": "c044f556-bb4d-43f5-a2be-51901d358a01",
+      "name": "Phase 3 Note"
+    },
+    {
+      "parameters": {
+        "content": "### Phase 4: Response\n**Action:** Returns the AI's summarized answer back to the Lovable App UI.\n**Format:** JSON object `{ \"output\": \"...\" }`.",
+        "height": 628,
+        "width": 340,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        896,
+        -672
+      ],
+      "id": "4f96a8cf-74eb-499b-b9e7-5218de73c58c",
+      "name": "Phase 4 Note"
+    },
+    {
+      "parameters": {
+        "content": "### Documentation: AI QA Analyst\n**Overview**: An intelligent agent that answers questions about agent performance by looking up real call transcripts.\n\n**Key Mechanism: RAG (Retrieval-Augmented Generation)**\nInstead of hallucinating, the AI searches your Qdrant database for actual call logs (e.g., \"Alex call on Jan 12\") and uses that context to generate a factual summary.",
+        "height": 480,
+        "width": 340,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        896,
+        -16
+      ],
+      "id": "fea7a86e-9722-4554-bf64-762dc932617d",
+      "name": "Reference Note"
+    }
+  ],
+  "connections": {
+    "Gemini Embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Manager Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Manager Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Vertex AI": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Manager Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loveable Message Receive Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Manager Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "activeVersionId": null,
+  "activeVersion": null
+}
