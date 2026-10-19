@@ -6,6 +6,13 @@ workflow, connect your own accounts, and run it.
 
 ## Workflows
 
+### 🧠 [RAG Transcript Assistant](rag-transcript-assistant/)
+A four-part **Retrieval-Augmented Generation** system that turns a folder of call transcripts into a
+searchable knowledge base, then answers questions about it in plain language — from a web app or
+from Google Chat — grounded in the real transcripts rather than invented. Drive → chunk → **Gemini
+embeddings** → **Qdrant**, with metadata on every chunk so answers cite their source file. One
+ingestion workflow, three query surfaces, one shared vector store.
+
 ### 🔎 [AI Competitive Intelligence Research](competitive-intelligence/)
 A weekly, two-agent AI pipeline: one agent **discovers** new competitors on the web, a second
 **researches** each for reviews, pricing, address, and search-ranking visibility, then writes
