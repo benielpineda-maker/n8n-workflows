@@ -1,0 +1,260 @@
+{
+  "updatedAt": "2026-04-06T20:12:48.000Z",
+  "createdAt": "2026-01-30T14:31:00.627Z",
+  "name": "RAG Transcript Assistant — 1. Ingestion",
+  "isArchived": true,
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "YOUR_DRIVE_FOLDER_ID",
+          "mode": "list",
+          "cachedResultName": "Transcripts Folder",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/YOUR_DRIVE_FOLDER_ID"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "id": "YOUR_DRIVE_FOLDER_ID",
+      "name": "Watch Transcript Folder",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {
+          "googleFileConversion": {
+            "conversion": {
+              "docsToFormat": "text/plain"
+            }
+          }
+        }
+      },
+      "id": "c8354c6a-5a66-4cf5-a9ba-1916d46afb34",
+      "name": "Download as Text",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -208,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-embedding-001"
+      },
+      "id": "67a40268-54a0-4030-913a-8b9538ee6bf6",
+      "name": "Gemini Embeddings",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        992
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "agent_transcripts_v2",
+          "mode": ""
+        },
+        "options": {
+          "metadataPayloadKey": "={   \"source_link\": \"{{ $('Watch Transcript Folder').item.json.webViewLink }}\",   \"file_name\": \"{{ $('Watch Transcript Folder').item.json.name }}\",   \"agent_name\": \"{{ $('Watch Transcript Folder').item.json.name.split('_')[0] }}\" }"
+        }
+      },
+      "id": "b6ef0b08-33c2-4f46-9678-74e0b4143092",
+      "name": "Qdrant Vector Store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1,
+      "position": [
+        -304,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "chunkOverlap": 100,
+        "options": {}
+      },
+      "id": "99ae8241-f0ce-4b21-8ab9-df29e45084a7",
+      "name": "Recursive Character Text Splitter",
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        128,
+        976
+      ]
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "binaryMode": "specificField",
+        "options": {}
+      },
+      "id": "02YOUR_DRIVE_FOLDER_ID",
+      "name": "Default Data Loader",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1,
+      "position": [
+        -176,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Phase 1: Watch & Download\n**Trigger:** New file in your watched Drive folder (`YOUR_DRIVE_FOLDER_ID`).\n**Action:** Downloads the file and converts it to Plain Text (`text/plain`).\n**Purpose:** Ensures the AI only reads clean text, not messy binary data.",
+        "height": 220,
+        "width": 1464
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1024,
+        256
+      ],
+      "id": "d92ad949-0706-4380-87d1-e7d3120043a9",
+      "name": "Phase 1 Note"
+    },
+    {
+      "parameters": {
+        "content": "### Phase 2: Processing & Chunking\n**Loader:** Reads the binary data.\n**Splitter:** Recursive Character Splitter.\n- **Chunk Size:** 500 (Default)\n- **Overlap:** 100 characters\n**Why?** Splitting long transcripts ensures the AI can find specific details without losing context.",
+        "height": 352,
+        "width": 1464,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1024,
+        496
+      ],
+      "id": "YOUR_DRIVE_FOLDER_ID",
+      "name": "Phase 2 Note"
+    },
+    {
+      "parameters": {
+        "content": "### Phase 3: Vectorization (The Brain)\n**Embeddings:** Google Gemini.\n**Store:** Qdrant (`agent_transcripts`).\n**Metadata:** Automatically tags each chunk with:\n- `source_link`: URL to the file\n- `file_name`: Original name\n- `agent_name`: Extracted from filename.",
+        "height": 284,
+        "width": 1464,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1024,
+        864
+      ],
+      "id": "efca98f7-8ab2-473f-9b53-128c6e0f7c26",
+      "name": "Phase 3 Note"
+    },
+    {
+      "parameters": {
+        "content": "### Documentation: RAG Ingestor\n**Overview**: This workflow builds the \"Long-Term Memory\" for your AI Agent.\n\n**Process**:\nEvery time a transcript file is saved to the specific Drive folder, this workflow wakes up, reads it, chops it into pieces, converts those pieces into math (vectors), and stores them in Qdrant so the Chat Agent can search them later.",
+        "height": 896,
+        "width": 500,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        464,
+        256
+      ],
+      "id": "e4b27YOUR_DRIVE_FOLDER_ID",
+      "name": "Reference Note"
+    }
+  ],
+  "connections": {
+    "Watch Transcript Folder": {
+      "main": [
+        [
+          {
+            "node": "Download as Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download as Text": {
+      "main": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "staticData": {
+    "node:Watch Transcript Folder": {
+      "lastTimeChecked": "2026-03-21T00:38:54Z"
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "activeVersionId": null,
+  "activeVersion": null
+}
